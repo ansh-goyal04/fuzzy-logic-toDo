@@ -1,0 +1,20 @@
+# Adaptive Neuro-Fuzzy Productivity Suite — Backend Dependencies
+# Install: pip install -r requirements.txt
+
+# --- Core Framework ---
+fastapi>=0.110.0,<1.0.0
+uvicorn[standard]>=0.29.0,<1.0.0
+
+# --- Database ---
+sqlalchemy>=2.0.0,<3.0.0
+
+# --- Validation / Serialization (bundled with FastAPI, pinned for clarity) ---
+pydantic>=2.0.0,<3.0.0
+
+# --- CORS middleware (ships with FastAPI/Starlette, no extra install) ---
+
+# --- Fuzzy Inference Engine ---
+numpy>=1.26.0
+scipy>=1.10.0
+networkx>=3.0
+scikit-fuzzy>=0.5.0
