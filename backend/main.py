@@ -20,6 +20,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.api import context_router, tasks_router, telemetry_router
 from backend.database.models import Base
 from backend.database.session import engine
+from apscheduler.schedulers.background import BackgroundScheduler
+from backend.learning_module.feedback_loop import NeuroFuzzyAdapter
+
+scheduler = BackgroundScheduler()
+
+def run_nightly_adaptation():
+    """Job wrapper for the APScheduler"""
+    adapter = NeuroFuzzyAdapter()
+    adapter.run_learning_loop()
 
 
 # ---------------------------------------------------------------------------
@@ -36,10 +45,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # --- Startup ---
     Base.metadata.create_all(bind=engine)
     print("✔  Database tables created / verified.")
+    
+    # Start the nightly APScheduler
+    scheduler.add_job(run_nightly_adaptation, 'cron', hour=2, minute=0)
+    scheduler.start()
+    print("✔  Neuro-Fuzzy APScheduler started (runs at 2:00 AM).")
+    
     yield
     # --- Shutdown ---
+    scheduler.shutdown()
     engine.dispose()
-    print("✔  Database engine disposed.")
+    print("✔  Database engine disposed and scheduler shutdown.")
 
 
 # ---------------------------------------------------------------------------
@@ -89,7 +105,25 @@ app.include_router(context_router, prefix=API_PREFIX)
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
-@app.get("/health", tags=["System"], summary="Health check")
+@app.get("/api/health", tags=["System"], summary="Health check")
 def health_check() -> dict[str, str]:
     """Returns 200 if the backend is running."""
     return {"status": "healthy", "service": "neuro-fuzzy-productivity-suite"}
+
+
+# ---------------------------------------------------------------------------
+# Learning Module API
+# ---------------------------------------------------------------------------
+@app.post("/api/learning/force-update", tags=["Learning"], summary="Force Neuro-Fuzzy Sync")
+def force_adaptation_update() -> dict[str, str]:
+    """
+    Manually trigger the Reinforcement Learning loop for demonstration purposes.
+    Extracts execution logs, calculates variance, adjusts membership parameters,
+    and updates user_weights.json.
+    """
+    try:
+        adapter = NeuroFuzzyAdapter()
+        adapter.run_learning_loop()
+        return {"status": "success", "message": "Neuro-Fuzzy weights adjusted successfully."}
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}

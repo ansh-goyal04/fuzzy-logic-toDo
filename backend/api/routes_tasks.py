@@ -12,8 +12,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from backend.api.schemas import TaskCreate, TaskResponse, TaskUpdate
-from backend.database.models import Task
+from backend.database.models import Task, UserContext, DistractionLog
 from backend.database.session import get_db
+from backend.fuzzy_engine.inference import TaskPrioritizer
+from datetime import datetime
+from sqlalchemy import func
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -85,7 +88,61 @@ def list_tasks(
         stmt = stmt.where(Task.parent_task_id.is_(None))
 
     stmt = stmt.order_by(Task.created_at.desc())
-    return list(db.scalars(stmt).unique().all())
+    tasks = list(db.scalars(stmt).unique().all())
+
+    # --- Run Fuzzy Engine ---
+    try:
+        prioritizer = TaskPrioritizer()
+        
+        # 1. Get latest context
+        ctx_stmt = select(UserContext).order_by(UserContext.timestamp.desc()).limit(1)
+        latest_ctx = db.scalars(ctx_stmt).first()
+        energy_val = latest_ctx.current_energy if latest_ctx else 4
+        stress_val = latest_ctx.stress_level if latest_ctx else 1
+        
+        energy_map = {1: 2, 2: 4, 3: 7, 4: 9}
+        stress_map = {1: 2, 2: 6, 3: 9}
+        inf_energy = energy_map.get(energy_val, 7)
+        inf_stress = stress_map.get(stress_val, 2)
+        
+        # 2. Distraction debt
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        dist_stmt = select(func.sum(DistractionLog.duration_minutes)).where(DistractionLog.timestamp >= today)
+        distraction_debt = db.scalar(dist_stmt) or 0
+        
+        effort_map = {1: 1, 2: 4, 3: 6, 4: 8}
+        importance_map = {1: 2, 2: 5, 3: 8, 4: 10}
+        
+        now = datetime.now()
+        for t in tasks:
+            if t.status in ("done", "cancelled"):
+                continue
+                
+            inf_effort = effort_map.get(t.estimated_effort, 4)
+            inf_importance = importance_map.get(t.importance, 5)
+            
+            deadline_val = 30
+            if t.deadline:
+                delta = (t.deadline - now).total_seconds() / 86400
+                deadline_val = max(0, min(30, delta))
+                
+            try:
+                t.fuzzy_priority = prioritizer.calculate_priority(
+                    deadline_val=deadline_val,
+                    effort_val=inf_effort,
+                    energy_val=inf_energy,
+                    importance_val=inf_importance,
+                    stress_val=inf_stress,
+                    distraction_val=distraction_debt
+                )
+            except Exception:
+                pass
+                
+        db.commit()
+    except Exception as e:
+        print(f"Error computing fuzzy priorities: {e}")
+
+    return tasks
 
 
 # ---------------------------------------------------------------------------

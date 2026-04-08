@@ -34,6 +34,10 @@ from __future__ import annotations
 import numpy as np
 import skfuzzy as fuzz
 from skfuzzy import control as ctrl
+import os
+import json
+
+WEIGHTS_FILE = os.path.join(os.path.dirname(__file__), "..", "learning_module", "user_weights.json")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -57,10 +61,28 @@ def _build_antecedents() -> dict[str, ctrl.Antecedent]:
 
     # ── Effort (hours needed: 0–10) ──────────────────────────────────────
     effort = ctrl.Antecedent(np.arange(0, 11, 1), "effort")
-    effort["very_low"] = fuzz.trapmf(effort.universe, [0, 0, 1, 2])
-    effort["low"]      = fuzz.trimf(effort.universe, [1, 3, 5])
-    effort["medium"]   = fuzz.trimf(effort.universe, [4, 6, 8])
-    effort["high"]     = fuzz.trapmf(effort.universe, [6, 8, 10, 10])
+    
+    # Load dynamic weights if RL loop has produced them
+    base_params = {
+        "very_low": [0, 0, 1, 2],
+        "low": [1, 3, 5],
+        "medium": [4, 6, 8],
+        "high": [6, 8, 10, 10]
+    }
+    
+    if os.path.exists(WEIGHTS_FILE):
+        try:
+            with open(WEIGHTS_FILE, 'r') as f:
+                data = json.load(f)
+                if "effort_membership_functions" in data:
+                    base_params.update(data["effort_membership_functions"])
+        except Exception as e:
+            print(f"[Neuro-Fuzzy] Failed to load adaptive weights: {e}. Falling back to default.")
+
+    effort["very_low"] = fuzz.trapmf(effort.universe, base_params["very_low"])
+    effort["low"]      = fuzz.trimf(effort.universe, base_params["low"])
+    effort["medium"]   = fuzz.trimf(effort.universe, base_params["medium"])
+    effort["high"]     = fuzz.trapmf(effort.universe, base_params["high"])
 
     # ── Energy (self-reported: 1–10) ─────────────────────────────────────
     energy = ctrl.Antecedent(np.arange(1, 11, 1), "energy")

@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Neuro-Fuzzy Productivity Telemetry",
+  "version": "1.0.0",
+  "description": "Tracks focus and distraction debt for the Adaptive Neuro-Fuzzy Productivity Suite.",
+  "permissions": [
+    "tabs",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "http://localhost:8000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

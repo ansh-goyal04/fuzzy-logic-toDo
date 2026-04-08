@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neuro-Fuzzy Telemetry</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <!-- ===== Header ===== -->
+  <header class="header" id="header">
+    <div class="header__brand">
+      <div class="header__logo">NF</div>
+      <div>
+        <div class="header__title">Productivity Telemetry</div>
+        <div class="header__subtitle">Neuro-Fuzzy Suite</div>
+      </div>
+    </div>
+    <div class="status-badge" id="status-badge" title="Backend connection status">
+      <span class="status-dot status-dot--unknown" id="status-dot"></span>
+      <span id="status-text">Checking…</span>
+    </div>
+  </header>
+
+  <!-- ===== Main Content ===== -->
+  <main class="content" id="main-content">
+
+    <!-- Currently Tracking -->
+    <div class="tracking-card" id="tracking-card">
+      <span class="tracking-card__dot tracking-card__dot--idle" id="tracking-dot"></span>
+      <div class="tracking-card__info">
+        <div class="tracking-card__label">Now tracking</div>
+        <div class="tracking-card__domain" id="tracking-domain">—</div>
+      </div>
+      <span class="tracking-card__category tracking-card__category--neutral" id="tracking-category">
+        idle
+      </span>
+    </div>
+
+    <!-- Distraction Debt Card -->
+    <div class="metric-card metric-card--distraction" id="card-distraction">
+      <div class="metric-card__header">
+        <span class="metric-card__label">Today's Distraction Debt</span>
+        <span class="metric-card__icon">🔴</span>
+      </div>
+      <div class="metric-card__value" id="distraction-value">0</div>
+      <div class="metric-card__unit">minutes</div>
+    </div>
+
+    <!-- Deep Work Card -->
+    <div class="metric-card metric-card--productive" id="card-productive">
+      <div class="metric-card__header">
+        <span class="metric-card__label">Today's Deep Work</span>
+        <span class="metric-card__icon">🟢</span>
+      </div>
+      <div class="metric-card__value" id="productive-value">0</div>
+      <div class="metric-card__unit">minutes</div>
+    </div>
+
+    <!-- Focus Ratio Bar -->
+    <div class="ratio-section" id="ratio-section">
+      <div class="ratio-label">
+        <span class="ratio-label__text">Focus Ratio</span>
+        <span class="ratio-label__value" id="ratio-value">—</span>
+      </div>
+      <div class="ratio-bar" id="ratio-bar">
+        <div class="ratio-bar__fill--productive" id="ratio-fill-productive" style="width: 50%"></div>
+        <div class="ratio-bar__fill--distraction" id="ratio-fill-distraction" style="width: 50%"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer class="footer" id="footer">
+    <div class="footer__sync-info" id="sync-info">Last sync: never</div>
+    <div class="footer__actions">
+      <button class="btn btn--accent" id="btn-sync" title="Force sync with backend">
+        ↻ Sync
+      </button>
+    </div>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
