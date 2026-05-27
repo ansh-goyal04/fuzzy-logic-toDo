@@ -44,18 +44,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # --- Startup ---
     Base.metadata.create_all(bind=engine)
-    print("✔  Database tables created / verified.")
+    print("OK  Database tables created / verified.")
     
     # Start the nightly APScheduler
     scheduler.add_job(run_nightly_adaptation, 'cron', hour=2, minute=0)
     scheduler.start()
-    print("✔  Neuro-Fuzzy APScheduler started (runs at 2:00 AM).")
+    print("OK  Neuro-Fuzzy APScheduler started (runs at 2:00 AM).")
     
     yield
     # --- Shutdown ---
     scheduler.shutdown()
     engine.dispose()
-    print("✔  Database engine disposed and scheduler shutdown.")
+    print("OK  Database engine disposed and scheduler shutdown.")
 
 
 # ---------------------------------------------------------------------------

@@ -13,12 +13,96 @@ const DEFAULT_DISTRACTION_DOMAINS = [
 ];
 
 const DEFAULT_PRODUCTIVE_DOMAINS = [
-  "github.com", "stackoverflow.com", "notion.so",
-  "leetcode.com", "docs.python.org",
+  "github.com",
+  "stackoverflow.com",
+  "notion.so",
+  "leetcode.com",
+  "docs.python.org",
+  "chatgpt.com",
+  "openai.com",
+  "gemini.google.com",
+  "geeksforgeeks.org",
+  "tutorialspoint.com",
+  "w3schools.com",
 ];
+
+const HOST_SHORTCUTS = {
+  chatgpt: "chatgpt.com",
+  openai: "openai.com",
+};
+
+function coerceDomainArray(raw) {
+  if (raw == null) return [];
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  if (typeof raw === "string") {
+    const s = raw.trim();
+    if (!s) return [];
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    } catch {
+      /* not JSON */
+    }
+    if (s.includes(",")) {
+      return s.split(",").map((x) => x.trim()).filter(Boolean);
+    }
+    return [s];
+  }
+  return [];
+}
+
+function rebuildDomainLists(stored) {
+  distractionDomains = normalizeDomainList([
+    ...DEFAULT_DISTRACTION_DOMAINS,
+    ...coerceDomainArray(stored?.distraction_domains),
+  ]);
+  productiveDomains = normalizeDomainList([
+    ...DEFAULT_PRODUCTIVE_DOMAINS,
+    ...coerceDomainArray(stored?.productive_domains),
+  ]);
+}
 
 let distractionDomains = [...DEFAULT_DISTRACTION_DOMAINS];
 let productiveDomains = [...DEFAULT_PRODUCTIVE_DOMAINS];
+
+function normalizeDomainRule(rule) {
+  let r = String(rule || "").trim().toLowerCase();
+  if (!r) return "";
+  if (!r.includes(".") && HOST_SHORTCUTS[r]) {
+    return HOST_SHORTCUTS[r];
+  }
+  if (r.includes("://")) {
+    try {
+      r = new URL(r).hostname.replace(/^www\./, "");
+    } catch {
+      return "";
+    }
+  } else {
+    r = r.replace(/^www\./, "");
+    if (r.includes("/")) r = r.split("/")[0];
+    if (r.includes(":") && !r.includes("::")) {
+      const hostOnly = r.split(":")[0];
+      if (hostOnly.includes(".")) r = hostOnly;
+    }
+  }
+  if (!r.includes(".") && HOST_SHORTCUTS[r]) {
+    return HOST_SHORTCUTS[r];
+  }
+  return r;
+}
+
+function normalizeDomainList(list) {
+  const seen = new Set();
+  const out = [];
+  for (const item of list || []) {
+    const n = normalizeDomainRule(item);
+    if (n && !seen.has(n)) {
+      seen.add(n);
+      out.push(n);
+    }
+  }
+  return out;
+}
 
 // ---------------------------------------------------------------------------
 // 2. DOM REFERENCES
@@ -57,7 +141,7 @@ function secondsToMinutes(seconds) {
 
 function extractDomain(url) {
   try {
-    return new URL(url).hostname.replace(/^www\./, "");
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
   } catch {
     return null;
   }
@@ -65,14 +149,20 @@ function extractDomain(url) {
 
 function classifyDomain(domain) {
   if (!domain) return "neutral";
-  const isDistraction = distractionDomains.some(
-    (d) => domain === d || domain.endsWith("." + d)
-  );
+  const host = domain.toLowerCase();
+
+  const isDistraction = distractionDomains.some((d) => {
+    const base = normalizeDomainRule(d);
+    return base && (host === base || host.endsWith("." + base));
+  });
   if (isDistraction) return "distracting";
-  const isProductive = productiveDomains.some(
-    (d) => domain === d || domain.endsWith("." + d)
-  );
+
+  const isProductive = productiveDomains.some((d) => {
+    const base = normalizeDomainRule(d);
+    return base && (host === base || host.endsWith("." + base));
+  });
   if (isProductive) return "productive";
+
   return "neutral";
 }
 
@@ -207,8 +297,7 @@ async function loadDomainLists() {
       "distraction_domains",
       "productive_domains",
     ]);
-    if (data.distraction_domains) distractionDomains = data.distraction_domains;
-    if (data.productive_domains) productiveDomains = data.productive_domains;
+    rebuildDomainLists(data);
   } catch (err) {
     console.warn("[Popup] Could not load domain lists:", err);
   }
@@ -296,8 +385,17 @@ dom.btnSync.addEventListener("click", async () => {
 // 7. INITIALIZATION
 // ---------------------------------------------------------------------------
 
+async function pingBackend() {
+  try {
+    await chrome.runtime.sendMessage({ type: "HEALTH_CHECK" });
+  } catch (err) {
+    console.warn("[Popup] Health check failed:", err);
+  }
+}
+
 async function init() {
   await loadDomainLists();
+  await pingBackend();
   await loadCurrentTab();
   await refreshData();
 

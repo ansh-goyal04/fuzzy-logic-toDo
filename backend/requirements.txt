@@ -13,8 +13,12 @@ pydantic>=2.0.0,<3.0.0
 
 # --- CORS middleware (ships with FastAPI/Starlette, no extra install) ---
 
+# --- Scheduling (nightly learning loop in main.py) ---
+apscheduler>=3.10,<4
+
 # --- Fuzzy Inference Engine ---
 numpy>=1.26.0
 scipy>=1.10.0
 networkx>=3.0
 scikit-fuzzy>=0.5.0
+packaging>=23.0
